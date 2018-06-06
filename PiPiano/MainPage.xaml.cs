@@ -1,21 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Devices.Gpio;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.Media.Core;
 using Windows.Media.Playback;
-using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media;
-using Windows.UI.Xaml.Navigation;
 
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -26,9 +14,10 @@ namespace PiPiano
     /// </summary>
     public sealed partial class MainPage : Page
     {
+        private const int NUM_OF_SOUNDS = 12;
         private const int PB_PIN_START = 5;
-        private GpioPin[] pushButtons = new GpioPin[8];
-        private bool[] downStates = new bool[8];
+        private GpioPin[] pushButtons = new GpioPin[NUM_OF_SOUNDS];
+        private bool[] downStates = new bool[NUM_OF_SOUNDS];
         private DispatcherTimer timer;
         private MediaPlayer player = new MediaPlayer();
 

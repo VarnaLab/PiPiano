@@ -17,6 +17,10 @@
             <Button Tag="5" Height="200" Width="40" Click="Button_Click"></Button>
             <Button Tag="6" Height="200" Width="40" Click="Button_Click"></Button>
             <Button Tag="7" Height="200" Width="40" Click="Button_Click"></Button>
+            <Button Tag="8" Height="200" Width="40" Click="Button_Click"></Button>
+            <Button Tag="9" Height="200" Width="40" Click="Button_Click"></Button>
+            <Button Tag="10" Height="200" Width="40" Click="Button_Click"></Button>
+            <Button Tag="11" Height="200" Width="40" Click="Button_Click"></Button>
         </StackPanel>
     </Grid>
 </Page>

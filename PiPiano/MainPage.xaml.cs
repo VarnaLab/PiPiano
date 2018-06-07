@@ -15,7 +15,30 @@ namespace PiPiano
     public sealed partial class MainPage : Page
     {
         private const int NUM_OF_SOUNDS = 12;
-        private const int PB_PIN_START = 5;
+        private static readonly int[] PB_PIN_NUMBERS = new int[] { 2,
+
+3,
+
+4,
+
+5,
+
+6,
+
+7,
+
+8,
+
+9,
+
+10,
+
+11,
+
+12,
+
+13
+};
         private GpioPin[] pushButtons = new GpioPin[NUM_OF_SOUNDS];
         private bool[] downStates = new bool[NUM_OF_SOUNDS];
         private DispatcherTimer timer;
@@ -40,9 +63,10 @@ namespace PiPiano
 
         private void InitGPIO(GpioController gpio)
         {
-            for (int i = 0; i < pushButtons.Length; i++)
+            for (int i = 0; i < PB_PIN_NUMBERS.Length; i++)
             {
-                pushButtons[i] = gpio.OpenPin(i + PB_PIN_START);
+                Console.WriteLine("Pin-" + PB_PIN_NUMBERS[i]);
+                pushButtons[i] = gpio.OpenPin(PB_PIN_NUMBERS[i]);
                 pushButtons[i].SetDriveMode(GpioPinDriveMode.Input);
                 downStates[i] = false;
             }

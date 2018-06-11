@@ -98,6 +98,7 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="ItemState.cs" />
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
@@ -110,18 +111,19 @@
     <None Include="PiPiano_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Assets\sound0.wav" />
-    <Content Include="Assets\sound1.wav" />
-    <Content Include="Assets\sound10.wav" />
-    <Content Include="Assets\sound11.wav" />
-    <Content Include="Assets\sound2.wav" />
-    <Content Include="Assets\sound3.wav" />
-    <Content Include="Assets\sound4.wav" />
-    <Content Include="Assets\sound5.wav" />
-    <Content Include="Assets\sound6.wav" />
-    <Content Include="Assets\sound7.wav" />
-    <Content Include="Assets\sound8.wav" />
-    <Content Include="Assets\sound9.wav" />
+    <Content Include="Assets\sound0.mp3" />
+    <Content Include="Assets\sound1.mp3" />
+    <Content Include="Assets\sound10.mp3" />
+    <Content Include="Assets\sound11.mp3" />
+    <Content Include="Assets\sound12.mp3" />
+    <Content Include="Assets\sound2.mp3" />
+    <Content Include="Assets\sound3.mp3" />
+    <Content Include="Assets\sound4.mp3" />
+    <Content Include="Assets\sound5.mp3" />
+    <Content Include="Assets\sound6.mp3" />
+    <Content Include="Assets\sound7.mp3" />
+    <Content Include="Assets\sound8.mp3" />
+    <Content Include="Assets\sound9.mp3" />
     <Content Include="Properties\Default.rd.xml" />
     <Content Include="Assets\LockScreenLogo.scale-200.png" />
     <Content Include="Assets\SplashScreen.scale-200.png" />

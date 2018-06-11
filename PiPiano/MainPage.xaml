@@ -8,7 +8,7 @@
     mc:Ignorable="d">
 
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
-        <StackPanel Orientation="Horizontal" Spacing="20" HorizontalAlignment="Center">
+        <StackPanel x:Name="StackPanelMain" Orientation="Horizontal" Spacing="20" HorizontalAlignment="Center">
             <Button Tag="0" Height="200" Width="40" Click="Button_Click"></Button>
             <Button Tag="1" Height="200" Width="40" Click="Button_Click"></Button>
             <Button Tag="2" Height="200" Width="40" Click="Button_Click"></Button>

@@ -11,22 +11,46 @@ using Windows.Media.Playback;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 
-// The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
-
 namespace PiPiano
 {
     /// <summary>
-    /// An empty page that can be used on its own or navigated to within a Frame.
+    /// Main user interface and logic.
     /// </summary>
     public sealed partial class MainPage : Page
     {
+        /// <summary>
+        /// Number of sounds
+        /// </summary>
+        private const int NUM_OF_SOUNDS = 12;
+
+        /// <summary>
+        /// Measure timer interval
+        /// </summary>
+        private const int interval = 20;
+
+        /// <summary>
+        /// Values read timer
+        /// </summary>
         private DispatcherTimer timer;
 
-        private const int NUM_OF_SOUNDS = 12;
+        /// <summary>
+        /// Piano states
+        /// </summary>
         private ItemState[] downStates = new ItemState[NUM_OF_SOUNDS];
+
+        /// <summary>
+        /// Sound players
+        /// </summary>
         private MediaPlayer[] players = new MediaPlayer[NUM_OF_SOUNDS];
 
+        /// <summary>
+        /// Line 1 reading
+        /// </summary>
         private SpiDevice ADC;
+
+        /// <summary>
+        /// Line 2 reading
+        /// </summary>
         private SpiDevice ADC2;
 
         public MainPage()
@@ -45,6 +69,9 @@ namespace PiPiano
             }
         }
 
+        /// <summary>
+        /// Initialize players
+        /// </summary>
         private void InitPlayers()
         {
             for (int i = 0; i < NUM_OF_SOUNDS; i++)
@@ -55,6 +82,10 @@ namespace PiPiano
             }
         }
 
+        /// <summary>
+        /// Initialize reading lines
+        /// </summary>
+        /// <returns></returns>
         private async Task InitSpi()
         {
             if (ADC == null)
@@ -65,11 +96,23 @@ namespace PiPiano
             if (ADC2 == null)
             {
                 ADC2 = await InitSPI(1);
-                timer.Interval = TimeSpan.FromMilliseconds(200);
+
+                timer.Interval = TimeSpan.FromMilliseconds(interval);
+
+                for(int i=0; i<NUM_OF_SOUNDS; i++)
+                {
+                    PlayNote(i);
+                    await Task.Delay(250);
+                }
             }
         }
 
-        private async Task<SpiDevice> InitSPI(int busNimber)
+        /// <summary>
+        /// Initialize SPI
+        /// </summary>
+        /// <param name="busNumber"></param>
+        /// <returns></returns>
+        private async Task<SpiDevice> InitSPI(int busNumber)
         {
             var settings = new SpiConnectionSettings(0)                         // Chip Select line
             {
@@ -79,10 +122,15 @@ namespace PiPiano
 
             string spiAqs = SpiDevice.GetDeviceSelector(); // ($"SPI{busNimber}");                /* Find the selector string for the SPI bus controller          */
             var devicesInfo = await DeviceInformation.FindAllAsync(spiAqs);     /* Find the SPI bus controller device with our selector string  */
-            SpiDevice spiDevice = await SpiDevice.FromIdAsync(devicesInfo[busNimber].Id, settings);     /* Create an SpiDevice with our bus controller and SPI settings */
+            SpiDevice spiDevice = await SpiDevice.FromIdAsync(devicesInfo[busNumber].Id, settings);     /* Create an SpiDevice with our bus controller and SPI settings */
             return spiDevice;
         }
 
+        /// <summary>
+        /// Handle timer tick
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private async void Timer_Tick(object sender, object e)
         {
             await InitSpi();
@@ -90,39 +138,59 @@ namespace PiPiano
             ReadSpiData();
         }
 
+        /// <summary>
+        /// Read values
+        /// </summary>
         private void ReadSpiData()
         {
-            for(int i = 0; i < 8; i++)
+            try
             {
-                int value = ReadAdc(i, ADC);
-                Trace.Write(i + " = [" + value + " ], ");
+                // Reading 8 values from SPI0 and play note if state is pressed
+                for(int i = 0; i < 8 && ADC != null; i++)
+                {
+                    int value = ReadAdc(i, ADC);
+                    Debug.WriteLine(i + " = [" + value + " ], ");
 
-                ItemState state = downStates[i];
-                bool wasPressed = state.IsPressed;
+                    ItemState state = downStates[i];
+                    bool wasPressed = state.IsPressed;
                 
-                if (state.UpdateState(value) && !wasPressed)
+                    if (state.UpdateState(value) && !wasPressed)
+                    {
+                        PlayNote(i);
+                    }
+                }
+
+                // Reading 8 values from SPI1 and play note if state is pressed
+                for (int i = 0; i < 4 && ADC2 != null; i++)
                 {
-                    playNote(i);
+                    int value = ReadAdc(i, ADC2);
+                    Debug.WriteLine(i + 8 + " = [" + value + " ], ");
+
+                    ItemState state = downStates[i + 8];
+                    bool wasPressed = state.IsPressed;
+
+                    if (state.UpdateState(value) && !wasPressed)
+                    {
+                        PlayNote(i + 8);
+                    }
                 }
             }
-
-            for (int i = 0; i < 4; i++)
+            catch(Exception ex)
             {
-                int value = ReadAdc(i, ADC2);
-                Trace.Write(i + 8 + " = [" + value + " ], ");
-
-                ItemState state = downStates[i + 8];
-                bool wasPressed = state.IsPressed;
-
-                if (state.UpdateState(value) && !wasPressed)
-                {
-                    playNote(i + 8);
-                }
+                Debug.WriteLine(ex);
             }
-
-            Trace.WriteLine("");
+            finally
+            {
+                Debug.WriteLine("");
+            }
         }
 
+        /// <summary>
+        /// Read specific channel value
+        /// </summary>
+        /// <param name="adc_number"></param>
+        /// <param name="spiADC"></param>
+        /// <returns></returns>
         private static int ReadAdc(int adc_number, SpiDevice spiADC)
         {
             byte byte1 = (byte)1;
@@ -137,6 +205,11 @@ namespace PiPiano
             return value;
         }
 
+        /// <summary>
+        /// Get configuration byte for reading channel
+        /// </summary>
+        /// <param name="adc_number"></param>
+        /// <returns></returns>
         private static byte GetRequestChannelByte(int adc_number)
         {
             //(byte)(0b10000000 | ((adc_number & 7) << 4));
@@ -174,6 +247,11 @@ namespace PiPiano
             return byte2;
         }
 
+        /// <summary>
+        /// Converts result byte data to integer value
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
         private static int ConverToInt(byte[] data)
         {
             int result = 0;
@@ -183,21 +261,30 @@ namespace PiPiano
             return result;
         }
 
-        private void playNote(int i)
+        /// <summary>
+        /// Plays note by index
+        /// </summary>
+        /// <param name="index"></param>
+        private void PlayNote(int index)
         {
-            if(players[i].PlaybackSession.CanPause)
+            if(players[index].PlaybackSession.CanPause)
             {
-                players[i].Dispose();
-                players[i] = new MediaPlayer();
-                players[i].Source = MediaSource.CreateFromUri(new Uri($"ms-appx:///Assets/sound{i}.mp3"));
+                players[index].Dispose();
+                players[index] = new MediaPlayer();
+                players[index].Source = MediaSource.CreateFromUri(new Uri($"ms-appx:///Assets/sound{index}.mp3"));
             }
 
-            players[i].Play();
+            players[index].Play();
         }
 
+        /// <summary>
+        /// Handles piano button ckick
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            playNote(int.Parse((e.OriginalSource as Button).Tag.ToString()));
+            PlayNote(int.Parse((e.OriginalSource as Button).Tag.ToString()));
         }
     }
 }

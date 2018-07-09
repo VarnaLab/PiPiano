@@ -1,4 +1,7 @@
-﻿using System;
+﻿//#define DEBUGMEM
+//#define RESTARTTIMER
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -8,6 +11,7 @@ using Windows.Devices.Gpio;
 using Windows.Devices.Spi;
 using Windows.Media.Core;
 using Windows.Media.Playback;
+using Windows.System;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 
@@ -26,12 +30,17 @@ namespace PiPiano
         /// <summary>
         /// Measure timer interval
         /// </summary>
-        private const int interval = 20;
+        private const int interval = 40;
 
         /// <summary>
         /// Values read timer
         /// </summary>
         private DispatcherTimer timer;
+
+        /// <summary>
+        /// Restart timer
+        /// </summary>
+        private DispatcherTimer restartTimer;
 
         /// <summary>
         /// Piano states
@@ -42,6 +51,11 @@ namespace PiPiano
         /// Sound players
         /// </summary>
         private MediaPlayer[] players = new MediaPlayer[NUM_OF_SOUNDS];
+
+        /// <summary>
+        /// Is first run
+        /// </summary>
+        private bool firstTime = true;
 
         /// <summary>
         /// Line 1 reading
@@ -67,6 +81,26 @@ namespace PiPiano
                 timer.Tick += Timer_Tick;
                 timer.Start();
             }
+
+#if RESTARTTIMER
+            if (gpio != null)
+            {
+                restartTimer = new DispatcherTimer();
+                restartTimer.Interval = TimeSpan.FromMinutes(15);
+                restartTimer.Tick += Restart_Timer_Tick;
+                restartTimer.Start();
+            }
+#endif  
+        }
+
+        /// <summary>
+        /// Restart timer handler
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Restart_Timer_Tick(object sender, object e)
+        {
+            ShutdownManager.BeginShutdown(ShutdownKind.Restart, TimeSpan.FromSeconds(5));
         }
 
         /// <summary>
@@ -78,7 +112,18 @@ namespace PiPiano
             {
                 players[i] = new MediaPlayer();
                 players[i].Source = MediaSource.CreateFromUri(new Uri($"ms-appx:///Assets/sound{i}.mp3"));
+                players[i].AutoPlay = false;
                 downStates[i] = new ItemState();
+
+                switch (i)
+                {
+                    case 5:
+                        downStates[i].MinPressedValue = 110;
+                        break;
+                    default:
+                        downStates[i].MinPressedValue = 100;
+                        break;
+                }
             }
         }
 
@@ -88,22 +133,28 @@ namespace PiPiano
         /// <returns></returns>
         private async Task InitSpi()
         {
-            if (ADC == null)
+            if(firstTime)
             {
-                ADC = await InitSPI(0);
-            }
-
-            if (ADC2 == null)
-            {
-                ADC2 = await InitSPI(1);
+                firstTime = false;
 
                 timer.Interval = TimeSpan.FromMilliseconds(interval);
 
-                for(int i=0; i<NUM_OF_SOUNDS; i++)
+                for (int i = 0; i < NUM_OF_SOUNDS; i++)
                 {
                     PlayNote(i);
                     await Task.Delay(250);
                 }
+                if (ADC == null)
+                {
+                    ADC = await InitSPI(0);
+                }
+
+                if (ADC2 == null)
+                {
+                    ADC2 = await InitSPI(1);
+                }
+
+                timer.Start();
             }
         }
 
@@ -133,10 +184,18 @@ namespace PiPiano
         /// <param name="e"></param>
         private async void Timer_Tick(object sender, object e)
         {
+            timer.Stop();
+
             await InitSpi();
 
             ReadSpiData();
+
+            timer.Start();
         }
+
+#if DEBUGMEM
+        static int counter = 0;
+#endif
 
         /// <summary>
         /// Read values
@@ -146,10 +205,10 @@ namespace PiPiano
             try
             {
                 // Reading 8 values from SPI0 and play note if state is pressed
-                for(int i = 0; i < 8 && ADC != null; i++)
+                for (int i = 0; i < 8 && ADC != null; i++)
                 {
                     int value = ReadAdc(i, ADC);
-                    Debug.WriteLine(i + " = [" + value + " ], ");
+                    //Trace.WriteLine(i + " = [" + value + " ], ");
 
                     ItemState state = downStates[i];
                     bool wasPressed = state.IsPressed;
@@ -164,7 +223,7 @@ namespace PiPiano
                 for (int i = 0; i < 4 && ADC2 != null; i++)
                 {
                     int value = ReadAdc(i, ADC2);
-                    Debug.WriteLine(i + 8 + " = [" + value + " ], ");
+                    //Trace.WriteLine(i + 8 + " = [" + value + " ], ");
 
                     ItemState state = downStates[i + 8];
                     bool wasPressed = state.IsPressed;
@@ -175,13 +234,13 @@ namespace PiPiano
                     }
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                Debug.WriteLine(ex);
+                //Trace.WriteLine(ex);
             }
             finally
             {
-                Debug.WriteLine("");
+                //Trace.WriteLine("");
             }
         }
 
@@ -202,6 +261,23 @@ namespace PiPiano
             spiADC.TransferFullDuplex(request, response);
 
             int value = ConverToInt(response);
+
+#if DEBUGMEM
+            counter++;
+            if (counter > 5)
+                counter = -5;
+
+            if (counter > 0)
+            {
+                value = 120;
+            }
+            else
+            {
+                value = 90;
+            }
+
+#endif
+
             return value;
         }
 
@@ -267,14 +343,14 @@ namespace PiPiano
         /// <param name="index"></param>
         private void PlayNote(int index)
         {
-            if(players[index].PlaybackSession.CanPause)
+            MediaPlayer mp = players[index];
+            if (mp.PlaybackSession.CanPause)
             {
-                players[index].Dispose();
-                players[index] = new MediaPlayer();
-                players[index].Source = MediaSource.CreateFromUri(new Uri($"ms-appx:///Assets/sound{index}.mp3"));
+                mp.Pause();
+                mp.PlaybackSession.Position = TimeSpan.FromMilliseconds(0);
             }
 
-            players[index].Play();
+            mp.Play();
         }
 
         /// <summary>

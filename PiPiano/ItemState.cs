@@ -14,12 +14,12 @@ namespace PiPiano
         /// <summary>
         /// Min value for pressed state
         /// </summary>
-        private const int MinPressedValue = 75;
+        public int MinPressedValue { get; set; } = 100;
 
         /// <summary>
         /// Number of values to consider valid state
         /// </summary>
-        private const int ValueStackSize = 5;
+        private const int ValueStackSize = 3;
 
         /// <summary>
         /// Is pressed state
@@ -65,7 +65,7 @@ namespace PiPiano
         /// <returns></returns>
         private bool CalculatePressed()
         {
-            if(IsPressed)
+            if (IsPressed)
             {
                 foreach (var value in LastValues)
                     if (value > MinPressedValue)
